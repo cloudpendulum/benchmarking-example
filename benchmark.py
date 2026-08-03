@@ -1,5 +1,12 @@
+import math
+import os
+import json
+import time
+from datetime import datetime
+
 from cloudpendulumclient.benchmark.control_loop import ControlLoop
 from cloudpendulumclient.benchmark.evaluators.goal_height_evaluator import GoalHeightEvaluator
+from cloudpendulumclient.disturbance import StateDependentPositionDisturbance, StateDependentTorqueDisturbance
 
 from controller.pid_controller import PointPIDController
 
@@ -47,7 +54,7 @@ for i in range(20):
     ))
 
 out_dir = "output/" + "benchmark_" + datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-os.mkdir(out_dir)
+os.makedirs(out_dir, exist_ok=True)
 with open(out_dir + "/params.json", "w") as f:
     f.write(json.dumps({
         "user_token": user_token,
@@ -106,8 +113,11 @@ for cell_id in cell_ids:
     finally:
         results[-1]['score'] = evaluator.get_score()
 
-    video_url, logs = control_loop.stop()
-    results[-1]['logs'] = logs
+    try:
+        video_url, logs = control_loop.stop()
+        results[-1]['logs'] = logs
+    except Exception as e:
+        print(str(e))
     print(results[-1])
 
     iteration_data.append({
