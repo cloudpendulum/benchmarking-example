@@ -3,13 +3,13 @@ from cloudpendulumclient.benchmark.controller import ControllerBase, MotorState
 
 class PointPIDController(ControllerBase):
     def __init__(self):
-        self.torque_limit = [0.15, 0.15]
+        self.torque_limit = [0.12, 0.12]
         self.dt = 0.002
 
         # default weights
-        self.Kp = 1.0
-        self.Ki = 0.0
-        self.Kd = 0.1
+        self.Kp = 0.2
+        self.Ki = 0.00
+        self.Kd = 0.01
         self.goal = np.array([np.pi, 0.0])
 
         # init pars
@@ -46,6 +46,9 @@ class PointPIDController(ControllerBase):
         else:
             D1 = 0.0
             D2 = 0.0
+
+        D1 = np.clip(D1, min(-P1, 0.0), max(-P1, 0.0))
+        D2 = np.clip(D2, min(-P1, 0.0), max(-P1, 0.0))
 
         u1 = P1 + I1 + D1
         u2 = P2 + I2 + D2
