@@ -31,7 +31,8 @@ for i in range(8*3):
         wait_at_target_seconds=3.0,
         goal_position=[math.pi, 0.0],
         disturbance_position=[p_inner, p_outer],
-        target_vel_threshold=40.0,
+        target_pos_threshold=0.3,
+        target_vel_threshold=50.0,
     ))
 
 for t in [0.02, 0.04, 0.06, 0.08, 0.1, -0.02, -0.04, -0.06, -0.08, -0.1]:
@@ -40,7 +41,8 @@ for t in [0.02, 0.04, 0.06, 0.08, 0.1, -0.02, -0.04, -0.06, -0.08, -0.1]:
         goal_position=[math.pi, 0.0],
         torque=[t, 0.0],
         duration=0.1,
-        target_vel_threshold=40.0,
+        target_pos_threshold=0.3,
+        target_vel_threshold=50.0,
     ))
 
 for i in range(20):
@@ -50,7 +52,7 @@ for i in range(20):
         torque=[0.01, 0.0],
         duration=0.1,
         target_pos_threshold = 1000.0,
-        target_vel_threshold=40.0,
+        target_vel_threshold=50.0,
     ))
 
 out_dir = "output/" + "benchmark_" + datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
@@ -86,6 +88,7 @@ for cell_id in cell_ids:
             experiment_type = experiment_type,
             dt = delta_time,
             cell_id = cell_id,
+            disturbances = disturbances,
         )
         control_loop.start()
 
