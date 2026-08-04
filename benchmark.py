@@ -85,6 +85,7 @@ for cell_id in cell_ids:
             experiment_time = experiment_time,
             experiment_type = experiment_type,
             dt = delta_time,
+            cell_id = cell_id,
         )
         control_loop.start()
 
