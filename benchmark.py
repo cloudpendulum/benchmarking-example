@@ -9,12 +9,13 @@ from cloudpendulumclient.benchmark.evaluators.goal_height_evaluator import GoalH
 from cloudpendulumclient.disturbance import StateDependentPositionDisturbance, StateDependentTorqueDisturbance
 
 from controller.pid_controller import PointPIDController
+from video import download_video
 
 user_token = "USER TOKEN"
 cell_ids = [
     201, 202, 203, 204,
 ]
-experiment_time = 20.0
+experiment_time = 30.0
 experiment_type = "DoublePendulum"
 delta_time = 0.002
 num_actuators = 2
@@ -68,7 +69,7 @@ with open(out_dir + "/params.json", "w") as f:
 
 iteration_data = []
 results = []
-for cell_id in cell_ids:
+for iteration, cell_id in enumerate(cell_ids):
     position_history = [[] for _ in range(num_actuators)]
     velocity_history = [[] for _ in range(num_actuators)]
     torque_history = [[] for _ in range(num_actuators)]
@@ -88,7 +89,9 @@ for cell_id in cell_ids:
             experiment_type = experiment_type,
             dt = delta_time,
             cell_id = cell_id,
+            preparation_time = 5.0,
             disturbances = disturbances,
+            record = True,
         )
         control_loop.start()
 
@@ -117,13 +120,11 @@ for cell_id in cell_ids:
     finally:
         results[-1]['score'] = evaluator.get_score()
 
-    try:
-        video_url, logs = control_loop.stop()
-        results[-1]['logs'] = logs
-    except Exception as e:
-        print(str(e))
+    video_url, logs = control_loop.stop()
+    results[-1]['logs'] = logs
+    results[-1]['video'] = download_video(out_dir + "/videos", video_url, iteration)
     print(results[-1])
-
+    
     iteration_data.append({
         "position": position_history,
         "velocity": velocity_history,
