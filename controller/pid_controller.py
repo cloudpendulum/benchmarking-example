@@ -3,7 +3,7 @@ from cloudpendulumclient.benchmark.controller import ControllerBase, MotorState
 
 class PointPIDController(ControllerBase):
     def __init__(self):
-        self.torque_limit = [0.12, 0.12]
+        self.torque_limit = [0.12, 0.4]
         self.dt = 0.002
 
         # default weights
@@ -26,18 +26,15 @@ class PointPIDController(ControllerBase):
 
         e1 = self.goal[0] - state[0].position
         e2 = self.goal[1] - state[1].position
-        # e1 = (e1 + np.pi) % (2*np.pi) - np.pi
-        # e2 = (e2 + np.pi) % (2*np.pi) - np.pi
+        
         self.errors1.append(e1)
         self.errors2.append(e2)
         self.errorsum1 += e1
         self.errorsum2 += e2
 
-        P1 = self.Kp * e1
-        P2 = self.Kp * e2
+        P1 = self.Kp * np.clip(e1, -0.8, 0.8)
+        P2 = self.Kp * np.clip(e2, -0.3, 0.3)
 
-        # I1 = self.Ki * np.sum(np.asarray(self.errors1)) * self.dt
-        # I2 = self.Ki * np.sum(np.asarray(self.errors2)) * self.dt
         I1 = self.Ki * self.errorsum1 * self.dt
         I2 = self.Ki * self.errorsum2 * self.dt
         if len(self.errors1) > 2:
@@ -47,11 +44,8 @@ class PointPIDController(ControllerBase):
             D1 = 0.0
             D2 = 0.0
 
-        D1 = np.clip(D1, min(-P1, 0.0), max(-P1, 0.0))
-        D2 = np.clip(D2, min(-P1, 0.0), max(-P1, 0.0))
-
-        u1 = P1 + I1 + D1
-        u2 = P2 + I2 + D2
+        u1 = np.clip(P1 + I1 + D1, min(P1, 0.0), max(P1, 0.0))
+        u2 = np.clip(P2 + I2 + D2, min(P2, 0.0), max(P2, 0.0))
 
         u1 = np.clip(u1, -self.torque_limit[0], self.torque_limit[0])
         u2 = np.clip(u2, -self.torque_limit[1], self.torque_limit[1])
