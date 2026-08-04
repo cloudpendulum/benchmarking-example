@@ -35,7 +35,6 @@ for it_result in result['iterations']:
         except Exception as e:
             print(e)
 
-
 def plot_disturbances(iteration: int):
     disturbance_areas = {}
     for dist in disturbances[iteration]:
@@ -58,25 +57,32 @@ def iteration_plot(iteration: int):
     controller_output_history = iteration_data['controller_output']
     time_history = iteration_data['time']
 
+    n_joints = len(position_history)
+    n_timesteps = len(time_history)
     T = time_history[-1]
-
-    height_history_joint0 = [-math.cos(p) for p in position_history[0]]
-    height_history = [
-        -math.cos(p0) - math.cos(p0+p1)
-        for (p0,p1)
-        in zip(position_history[0], position_history[1])
-    ]
-
     n_plots = 4
 
-    max_vpos = 2.0 * 1.1
+    joint_height_history = []
+    joint_angle = [0.0] * n_timesteps
+    for j in range(n_joints):
+        height_history = [0.0] * n_timesteps
+        for i in range(n_timesteps):
+            joint_angle[i] += position_history[j][i]
+            height_history[i] = -math.cos(joint_angle[i])
+        joint_height_history.append(height_history)
+
+    max_vpos = float(n_joints) * 1.1
+    goal_height = float(n_joints) * 0.9
     plt.subplot(n_plots, 1, 1)
     plt.axis([0.0, T, -max_vpos, max_vpos])
     plt.ylabel("Vertical position")
     plt.xlabel("Time")
-    plt.hlines(y=[2.0 * 0.9], xmin=0, xmax=T, colors='r', linestyles='dashed', label="Goal threshold")
-    plot1 = plt.plot(time_history, height_history_joint0, label="Shoulder")
-    plot2 = plt.plot(time_history, height_history, label="Elbow")
+    plt.hlines(
+        y=[goal_height], xmin=0, xmax=T,
+        colors='r', linestyles='dashed', label="Goal threshold"
+    )
+    for j, height_history in enumerate(joint_height_history):
+        plt.plot(time_history, height_history, label="Joint " + str(j))
     plot_disturbances(iteration)
     plt.legend(loc="upper right")
 
@@ -85,8 +91,8 @@ def iteration_plot(iteration: int):
     plt.axis([0.0, T, -max_vel, max_vel])
     plt.ylabel("Joint velocity")
     plt.xlabel("Time")
-    plt.plot(time_history, velocity_history[0], label="Shoulder")
-    plt.plot(time_history, velocity_history[1], label="Elbow")
+    for j, vel_history in enumerate(velocity_history):
+        plt.plot(time_history, vel_history, label="Joint " + str(j))
     plot_disturbances(iteration)
     plt.legend(loc="upper right")
 
@@ -95,8 +101,8 @@ def iteration_plot(iteration: int):
     plt.axis([0.0, T, -max_torque, max_torque])
     plt.ylabel("Joint torque")
     plt.xlabel("Time")
-    plt.plot(time_history, torque_history[0], label="Shoulder")
-    plt.plot(time_history, torque_history[1], label="Elbow")
+    for j, u_hist in enumerate(torque_history):
+        plt.plot(time_history, u_hist, label="Joint " + str(j))
     plot_disturbances(iteration)
     plt.legend(loc="upper right")
 
@@ -105,7 +111,8 @@ def iteration_plot(iteration: int):
     plt.axis([0.0, T, -max_u, max_u])
     plt.ylabel("Controller output torque")
     plt.xlabel("Time")
-    plt.plot(time_history, controller_output_history[0], label="Shoulder")
+    for j, u_out_hist in enumerate(controller_output_history):
+        plt.plot(time_history, u_out_hist, label="Joint " + str(j))
     plot_disturbances(iteration)
     plt.legend(loc="upper right")
 
