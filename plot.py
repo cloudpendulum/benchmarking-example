@@ -17,7 +17,7 @@ with open(result_file, "r") as f:
 
 disturbances = []
 for it_result in result['iterations']:
-    logs = it_result['logs']
+    logs = it_result.get('logs') or []
 
     start_prefix = "LOG: Started disturbance "
     end_prefix = "LOG: Ended disturbance "
@@ -117,9 +117,15 @@ def iteration_plot(iteration: int):
     plt.legend(loc="upper right")
 
 num_iterations = len(data['iterations'])
+figs = []
 for i in range(num_iterations):
     iteration_result = result['iterations'][i]
+    if not data['iterations'][i]['time']:
+        print("Skipping iteration {} (cell {}): no data recorded. Exception: {}".format(
+            i, iteration_result['cell_id'], iteration_result.get('exception')))
+        continue
     fig = plt.figure(i)
+    figs.append(i)
     fig.set_size_inches(32, 16)
     fig.suptitle(
         "Iteration: {} - Cell: {} - Result: {:.2f}".format(
@@ -130,7 +136,8 @@ for i in range(num_iterations):
     iteration_plot(i)
 
 from matplotlib.backends.backend_pdf import PdfPages
-figs = list(range(num_iterations))
+if not figs:
+    sys.exit("No iterations with data to plot in " + data_dir)
 with PdfPages(data_dir + '/plots.pdf') as pdf:
     for fig in figs:
         pdf.savefig(fig, bbox_inches='tight') 

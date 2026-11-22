@@ -1,5 +1,5 @@
 import numpy as np
-from cloudpendulumclient.benchmark.controller import ControllerBase, MotorState
+from pycloudpendulumbenchmark import ControllerBase, MotorState
 
 class PointPIDController(ControllerBase):
     def __init__(self):

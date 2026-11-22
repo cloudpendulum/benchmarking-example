@@ -4,9 +4,9 @@ import json
 import time
 from datetime import datetime
 
-from cloudpendulumclient.benchmark.control_loop import ControlLoop
-from cloudpendulumclient.benchmark.evaluators.goal_height_evaluator import GoalHeightEvaluator
-from cloudpendulumclient.disturbance import StateDependentPositionDisturbance, StateDependentTorqueDisturbance
+from pycloudpendulum import StateDependentPositionDisturbance, StateDependentTorqueDisturbance
+from pycloudpendulumbenchmark import ControlLoop
+from pycloudpendulumbenchmark.evaluators import GoalHeightEvaluator
 
 from controller.pid_controller import PointPIDController
 from video import download_video
@@ -19,8 +19,43 @@ experiment_time = 30.0
 experiment_type = "DoublePendulum"
 delta_time = 0.002
 num_actuators = 2
+preparation_time = 5.0
 EvaluatorType = GoalHeightEvaluator
 ControllerType = PointPIDController
+
+
+class BenchmarkControlLoop(ControlLoop):
+    """ControlLoop with a configurable preparation time.
+
+    pycloudpendulumbenchmark's ControlLoop.start() hardcodes
+    preparation_time=0.0, so override start() to keep the previous behaviour.
+    """
+
+    def __init__(self, *args, preparation_time: float = 0.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.preparation_time = preparation_time
+
+    def start(self):
+        session_token, _ = self.client.start_experiment(
+            user_token=self.user_token,
+            experiment_type=self.experiment_type,
+            experiment_time=self.experiment_time,
+            preparation_time=self.preparation_time,
+            initial_position=self.initial_position,
+            disturbances=self.disturbances,
+            record=True,
+            cell_id=self.cell_id,
+        )
+        self.i = 0
+        self.loop_start_time = time.time()
+        self.measured_time = 0
+        self.session_token = session_token
+
+    def get_torque(self) -> list[float]:
+        return self.client.get_torque(self.session_token)
+
+    def get_logs(self) -> list[str]:
+        return self.client.get_logs(self.session_token)
 
 disturbances = []
 for i in range(8*3):
@@ -80,19 +115,19 @@ for iteration, cell_id in enumerate(cell_ids):
     results[-1]['cell_id'] = cell_id
     results[-1]['exception'] = None
 
+    controller = ControllerType()
+    evaluator = EvaluatorType()
+    control_loop = BenchmarkControlLoop(
+        user_token = user_token,
+        experiment_time = experiment_time,
+        experiment_type = experiment_type,
+        dt = delta_time,
+        cell_id = cell_id,
+        initial_position = None,
+        disturbances = disturbances,
+        preparation_time = preparation_time,
+    )
     try:
-        controller = ControllerType()
-        evaluator = EvaluatorType()
-        control_loop = ControlLoop(
-            user_token = user_token,
-            experiment_time = experiment_time,
-            experiment_type = experiment_type,
-            dt = delta_time,
-            cell_id = cell_id,
-            preparation_time = 5.0,
-            disturbances = disturbances,
-            record = True,
-        )
         control_loop.start()
 
         while not control_loop.finished():
@@ -120,7 +155,14 @@ for iteration, cell_id in enumerate(cell_ids):
     finally:
         results[-1]['score'] = evaluator.get_score()
 
-    video_url, logs = control_loop.stop()
+    logs = None
+    video_url = None
+    if control_loop.session_token is not None:
+        try:
+            logs = control_loop.get_logs()
+        except Exception as e:
+            print("Failed to fetch logs:", str(e))
+        video_url = control_loop.stop()
     results[-1]['logs'] = logs
     results[-1]['video'] = download_video(out_dir + "/videos", video_url, iteration)
     print(results[-1])
